@@ -1,21 +1,15 @@
-name: Build and Sign All myVideo APK Variants
+name: Build, Sign and Create Release for myVideo APK
 
 on:
   push:
-    branches:
-      - main
     tags:
-      - '*'  # 当 push tag 时触发 Release（可改为 'v*' 只匹配版本 tag）
-  pull_request:
-    branches:
-      - main
-  workflow_dispatch:
+      - 'v*'  # 只在 push tag 时触发（可改为 'v*' 只匹配版本 tag，如 v1.0.0）
 
 jobs:
-  build:
+  build-and-release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # 允许创建 GitHub Release
+      contents: write  # 允许创建和上传 GitHub Release
 
     steps:
       - name: Checkout 代码
@@ -48,14 +42,14 @@ jobs:
       - name: 授予 gradlew 执行权限
         run: chmod +x ./gradlew
 
-      # 步骤1：从 Secrets 解码 keystore 文件到项目根目录
+      # 步骤1：从 Secrets 解码 keystore 文件
       - name: 解码 Keystore 文件
         env:
           SIGNING_KEY_BASE64: ${{ secrets.SIGNING_KEY_BASE64 }}
         run: |
           echo "$SIGNING_KEY_BASE64" | base64 -d > my-release-key.jks
 
-      # 步骤2：构建并签名所有 Release 变体（使用 android.injected.signing 注入）
+      # 步骤2：构建并签名所有 Release 变体 APK
       - name: 构建并签名所有 Release APK
         run: |
           ./gradlew assembleRelease \
@@ -64,29 +58,20 @@ jobs:
             -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
             -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
 
-      # 步骤3：列出生成的 APK（调试用，必看）
+      # 步骤3：列出生成的 APK（便于调试）
       - name: 列出所有生成的 APK
         run: |
           echo "=== 已生成的签名 APK 文件 ==="
-          find app/build/outputs/apk -name "*.apk" -ls || echo "未找到任何 APK，请检查上一步构建是否成功"
+          find app/build/outputs/apk -name "*.apk" -ls || echo "未找到任何 APK，请检查构建是否成功"
 
-      # 步骤4：上传所有生成的签名 APK（一个 artifact 包含全部，用于非 tag 场景）
-      - name: 上传所有签名后的 APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: myVideo-All-Variants-Signed-APKs
-          path: app/build/outputs/apk/**/*.apk
-          if-no-files-found: error
-
-      # 新增步骤：当 push tag 时，创建 GitHub Release 并上传所有 APK 作为资产
-      - name: 创建 GitHub Release 并上传 APK（仅在 tag push 时执行）
-        if: startsWith(github.ref, 'refs/tags/')  # 只在 tag push 时运行
+      # 步骤4：创建 GitHub Release 并上传所有 APK 作为资产
+      - name: 创建 GitHub Release 并上传 APK
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "app/build/outputs/apk/**/*.apk"  # 上传所有变体的 APK
-          token: ${{ secrets.GITHUB_TOKEN }}  # 默认 PAT，使用 workflow 的内置 token 即可
+          artifacts: "app/build/outputs/apk/**/*.apk"  # 上传所有变体 APK
+          token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           prerelease: false
-          allowUpdates: false  # 如果已有同名 tag 的 Release，可改为 true 更新它
-          # 可选：添加 Release 描述（body），例如从 CHANGELOG.md 读取
+          allowUpdates: false  # 若需覆盖已有 Release，可改为 true
+          # 可选：自动读取 CHANGELOG.md 作为 Release 描述
           # bodyFile: "CHANGELOG.md"
