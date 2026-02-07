@@ -75,7 +75,8 @@ public class JarLoader {
                                         }
                                     };
                                     if ("main".equals(key)) {
-                                        initMethod.invoke(null, App.getInstance());
+                                        //initMethod.invoke(null, App.getInstance());
+initMethod.invoke(null, wrappedContext);
                                     } else {
                                         initMethod.invoke(null, wrappedContext);
                                     }
