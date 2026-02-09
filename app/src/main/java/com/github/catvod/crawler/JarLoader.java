@@ -74,13 +74,12 @@ public class JarLoader {
                                             return "com.github.tvbox.osc.tk";  // ← 改成你想要的固定包名
                                         }
                                     };
-                                    if ("main".equals(key)) {
-                                        //initMethod.invoke(null, App.getInstance());
-initMethod.invoke(null, wrappedContext);
-                                    } else {
-                                        initMethod.invoke(null, wrappedContext);
-                                    }
-                                    //initMethod.invoke(null, App.getInstance());
+				    boolean isMainJar = jar != null && jar.toLowerCase().contains("/spider.jar");
+				    if (isMainJar) {
+					    initMethod.invoke(null, wrappedContext);
+				    } else {
+					    initMethod.invoke(null, App.getInstance());
+				    }
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                 }
