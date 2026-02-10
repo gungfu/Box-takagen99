@@ -74,13 +74,12 @@ public class JarLoader {
                                             return "com.github.tvbox.osc.tk";  // ← 改成你想要的固定包名
                                         }
                                     };
-                                    if ("main".equals(key)) {
-                                        //initMethod.invoke(null, App.getInstance());
+boolean isMainJar = jar != null && jar.toLowerCase().contains("/spider.jar");
+                                    if (isMainJar) {
 initMethod.invoke(null, wrappedContext);
                                     } else {
-                                        initMethod.invoke(null, wrappedContext);
+                                        initMethod.invoke(null, App.getInstance());
                                     }
-                                    //initMethod.invoke(null, App.getInstance());
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                 }
@@ -188,7 +187,15 @@ initMethod.invoke(null, wrappedContext);
         try {
             Log.i("JarLoader", "echo-getSpider 加载spider: " + key);
             Spider sp = (Spider) classLoader.loadClass("com.github.catvod.spider." + clsKey).newInstance();
-            sp.init(App.getInstance(), ext);
+Context wrappedContext = new ContextWrapper(App.getInstance()) {
+                                        @Override
+                                        public String getPackageName() {
+                                            return "com.github.tvbox.osc.tk";  // ← 改成你想要的固定包名
+                                        }
+                                    };
+
+                                    
+            sp.init(wrappedContext, ext);
             if (!jar.isEmpty()) {
                 sp.homeContent(false); // 增加此行 应该可以解决部分写的有问题源的历史记录问题 但会增加这个源的首次加载时间 不需要可以已删掉
             }
